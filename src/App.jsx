@@ -1,61 +1,127 @@
 import { useState } from "react";
+import { TextField, Box, Button, Chip, Grow } from "@mui/material";
 import "./App.css";
-import { TextField, Box, Button } from "@mui/material";
 
-function App() {
+export default function App() {
   const [inputNum, setInputNum] = useState("");
-  const [targetNum, setTargetNum] = useState();
+  const [targetNum, setTargetNum] = useState("");
   const [listNum, setListNum] = useState([]);
+  const [highlightRange, setHighlightRange] = useState(null);
 
   const handleInputNum = (e) => {
-    const inputValues = e.target.value.split(",");
-    setListNum(inputValues);
-    setInputNum(e.target.value);
+    let val = e.target.value;
+    val = val.replace(/[^0-9,]/g, "");
+    val = val.replace(/,{2,}/g, ",");
+    if (val.startsWith(",")) {
+      val = val.slice(1);
+    }
+    setInputNum(val);
+
+    const arr = val
+      .split(",")
+      .map((num) => num.trim())
+      .filter((num) => num !== "" && !isNaN(num)) 
+      .map(Number)
+      .filter((n) => n > 0); 
+
+    setListNum(arr);
+    setHighlightRange(null);
   };
 
-  const handleFindSortestSum = () => {
-    if (targetNum > 0) {
-      let matchNumber = [];
-      for (let i = 0; i < listNum.length; i++) {
-        for (let j = i + 1; j < listNum.length; j++) {
-          if (targetNum === listNum[i] + listNum[j]) {
-            matchNumber.push([listNum[i], listNum[j]]);
+  // Sliding Window: Find shortest subarray = target sum
+  const handleFindShortestSum = () => {
+    const target = Number(targetNum);
+    if (!target) return;
+
+    let left = 0;
+    let sum = 0;
+    let best = null;
+    let minLen = Infinity;
+
+    for (let right = 0; right < listNum.length; right++) {
+      sum += listNum[right];
+
+      while (sum >= target) {
+        if (sum === target) {
+          const len = right - left + 1;
+          if (len < minLen) {
+            minLen = len;
+            best = { start: left, end: right };
           }
         }
+        sum -= listNum[left];
+        left++;
       }
-      console.log(matchNumber, "matchNumber");
     }
+
+    setHighlightRange(best);
   };
 
   return (
-    <>
-      <h1>Shortest Sum Finder</h1>
-      <Box sx={{ display: "flex", direction: "row", gap: 2 }}>
+    <Box
+      sx={{
+        width: "100%",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        pt: 10,
+      }}
+    >
+      <Box textAlign="center">
+        <h1>Shortest Sum Finder</h1>
+      </Box>
+
+      <Box sx={{ display: "flex", gap: 2, mt: 5 }}>
         <TextField
-          placeholder="Add coma separated numbers"
-          sx={{ width: "50%" }}
+          type="text"
+          placeholder="3,4,2,1,3,6,5,7"
+          sx={{ width: "350px" }}
           value={inputNum}
-          onChange={(e) => handleInputNum(e)}
-        ></TextField>
+          onChange={handleInputNum}
+        />
+
         <TextField
           type="number"
           value={targetNum}
-          onChange={(e) => {
-            setTargetNum(e.target.value);
-          }}
-          sx={{ width: "20%" }}
-        ></TextField>
+          onChange={(e) => setTargetNum(e.target.value)}
+          sx={{ width: "120px" }}
+        />
+
         <Button
           variant="contained"
-          sx={{ width: "15%" }}
-          onClick={handleFindSortestSum}
+          sx={{ width: "120px" }}
+          onClick={handleFindShortestSum}
         >
           Find
         </Button>
       </Box>
-      <Box mt={3}>{listNum.join(",")}</Box>
-    </>
+
+      <Box sx={{ display: "flex", gap: 2, mt: 5 }}>
+        {listNum.map((num, index) => {
+          const isHighlighted =
+            highlightRange &&
+            index >= highlightRange.start &&
+            index <= highlightRange.end;
+
+          return (
+            <Grow in={true} timeout={400} key={index}>
+              <Chip
+                label={num}
+                sx={{
+                  fontSize: "20px",
+                  padding: "25px 15px",
+                  background: isHighlighted ? "#ff9800" : "#e8e8e8",
+                  color: isHighlighted ? "white" : "black",
+                  borderRadius: "10px",
+                  transition: "0.3s ease-in-out",
+                  boxShadow: isHighlighted ? "0 0 12px #ff9800" : "none",
+                }}
+              />
+            </Grow>
+          );
+        })}
+      </Box>
+    </Box>
   );
 }
-
-export default App;
